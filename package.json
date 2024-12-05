@@ -1,0 +1,33 @@
+{
+  "name": "browserify-hot-reload",
+  "version": "1.0.0",
+  "description": "browserify hot reload server",
+  "main": "server.js",
+  "bin": {
+    "bhr": "bin.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/rhodey/bhr.git"
+  },
+  "homepage": "https://github.com/rhodey/bhr",
+  "dependencies": {
+    "minimist": "^1.2.0",
+    "browserify": "^17.0.1",
+    "@browserify/envify": "^6.0.0",
+    "watchify": "^4.0.0",
+    "chokidar": "^3.6.0",
+    "mkdirp": "^3.0.1",
+    "less": "^4.2.0",
+    "luxon": "^3.2.1",
+    "split": "^1.0.1",
+    "ws": "^8.18.0"
+  },
+  "keywords": [
+    "browserify",
+    "hot-reload",
+    "live-reload",
+    "reload",
+    "bhr"
+  ]
+}
