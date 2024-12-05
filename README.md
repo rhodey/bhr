@@ -11,6 +11,11 @@ bhr main.js index.html assets/ -o dist/bundle.js -p 8080 --http localhost:8081/a
 bhr main.js index.html assets/ -o dist/bundle.js -p 8080 --https your.prod.server:443/api
 ```
 
+You can also specify a command to run whenever any of the watched paths change
+```
+bhr main.js index.html assets/ -o dist/bundle.js -c "npm run another-thing"
+```
+
 ## Envify
 [Envify](https://www.npmjs.com/package/@browserify/envify) is enabled so you can use `process.env.VAR_NAME` in source but note that destructuring `process.env` does not work
 

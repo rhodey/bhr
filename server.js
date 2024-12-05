@@ -2,6 +2,7 @@ const fs = require('fs')
 const fsp = require('fs').promises
 const path = require('path')
 const { mkdirp } = require('mkdirp')
+const { exec } = require('child_process')
 const split = require('split')
 const browserify = require('browserify')
 const watchify = require('watchify')
@@ -68,16 +69,35 @@ function onLessCssChange(input, outdir, wssPush) {
 }
 
 function onAssetChange(input, output, wssPush, startup) {
-  fs.createReadStream(input)
-    .pipe(fs.createWriteStream(output))
-    .once('close', () => {
-      if (startup) { return }
-      const time = DateTime.now().toFormat('HH:mm:ss')
-      console.log(`${time} wrote ${output}`)
-      const js = output.endsWith('.js') || output.endsWith('.html')
-      const css = output.endsWith('.css')
-      wssPush(js, css)
+  return new Promise((res, rej) => {
+    fs.createReadStream(input)
+      .pipe(fs.createWriteStream(output))
+      .once('close', () => {
+        if (startup) { return res() }
+        const time = DateTime.now().toFormat('HH:mm:ss')
+        console.log(`${time} wrote ${output}`)
+        const js = output.endsWith('.js') || output.endsWith('.html')
+        const css = output.endsWith('.css')
+        wssPush(js, css)
+        res()
+      })
+  })
+}
+
+function runCmd(cmd, wssPush) {
+  if (!cmd) { return Promise.resolve() }
+  console.log(`${cmd} ...`)
+  return new Promise((res, rej) => {
+    exec(cmd, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`${cmd} ... error ${stderr}`)
+      } else {
+        console.log(`${cmd} ... ok`)
+      }
+      wssPush(true)
+      res()
     })
+  })
 }
 
 module.exports = async function server(argv) {
@@ -86,6 +106,7 @@ module.exports = async function server(argv) {
   const jsout = argv.o
   const rel = argv.rel
   const lessin = argv.less
+  const cmd = argv.c
 
   let port = argv.p
   if (!port) { port = 8080 }
@@ -136,20 +157,28 @@ module.exports = async function server(argv) {
     })
   }
 
-  const onJsChangee = () => onJsChange(bundle, jsout, wssPush)
+  const onJsChangee = async () => {
+    await onJsChange(bundle, jsout, wssPush)
+    return runCmd(cmd, wssPush)
+  }
 
   let startup = true
   setTimeout(() => startup = false, 5_000)
 
   const onAssetChangee = (path) => {
-    if (!startup && path.endsWith('.less')) { return onLessCssChange(lessin, outdir, wssPush) }
-    // todo: support ignore more
-    if (path.endsWith('.swp') || path.endsWith('.less')) { return }
-    if (path.endsWith('.html')) {
-      onAssetChange(path, `${base}/${path}`, wssPush, startup)
-      return
+    let todo = null
+    if (!startup && path.endsWith('.less')) {
+      todo = onLessCssChange(lessin, outdir, wssPush)
+    } else if (path.endsWith('.swp') || path.endsWith('.less')) {
+      // todo: use .gitignore
+      todo = null
+    } else if (path.endsWith('index.html')) {
+      todo = onAssetChange(path, `${base}/${path}`, wssPush, startup)
+    } else {
+      todo = onAssetChange(path, `${outdir}/${path}`, wssPush, startup)
     }
-    onAssetChange(path, `${outdir}/${path}`, wssPush, startup)
+    if (!todo || startup) { return }
+    return todo.then(() => runCmd(cmd, wssPush))
   }
 
   const forceChange = async () => {
@@ -164,6 +193,7 @@ module.exports = async function server(argv) {
     await onJsChangee()
     if (!lessin) { return }
     await onLessCssChange(lessin, outdir, wssPush)
+    await runCmd(cmd, wssPush)
   }
 
   return new Promise((res, rej) => {
@@ -244,17 +274,21 @@ module.exports = async function server(argv) {
       const fwd = fwdHost(path)
       if (fwd) { return fwdRequest(fwd, request, response) }
 
+      // serve exact
       let file = `${base}${path}`
-      if (file && !file.endsWith('/') && exists(file)) {
+      if (!file.endsWith('/') && exists(file)) {
         response.writeHead(200)
         fs.createReadStream(file).pipe(response)
         return
       }
 
-      file = `${base}/index.html`
+      // serve approx or index
+      file = `${base}${path}.html`
+      file = exists(file) ? file : `${base}/index.html`
       file = fs.readFileSync(file, 'utf8')
-      file = file.replace('</body>', `${clientjs}\n</body>`)
 
+      // add client.js
+      file = file.replace('</body>', `${clientjs}\n</body>`)
       response.writeHead(200)
       response.end(file)
     })
