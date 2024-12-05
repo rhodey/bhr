@@ -1,7 +1,8 @@
 {
   "name": "browserify-hot-reload",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "browserify hot reload server",
+  "license": "MIT",
   "main": "server.js",
   "bin": {
     "bhr": "bin.js"
