@@ -9,7 +9,6 @@ const watchify = require('watchify')
 const envify = require('@browserify/envify/custom')
 const chokidar = require('chokidar')
 const { DateTime } = require('luxon')
-const less = require('less')
 const http = require('http')
 const https = require('https')
 const ws = require('ws')
@@ -54,20 +53,6 @@ function onJsChange(bundle, jsout, wssPush) {
   })
 }
 
-function onLessCssChange(input, outdir, wssPush) {
-  let cssout = input.replace('.less', '.css')
-  cssout = `${outdir}/${cssout}`
-  let opts = { encoding: 'utf8' }
-  const style = fs.readFileSync(input, opts)
-  opts = { filename: input }
-  return less.render(style, opts).then((bundle) => {
-    fs.writeFileSync(cssout, bundle.css) 
-    const time = DateTime.now().toFormat('HH:mm:ss')
-    console.log(`${time} wrote ${cssout}`)
-    wssPush(false, true)
-  }).catch(console.error)
-}
-
 function onAssetChange(input, output, wssPush, startup) {
   return new Promise((res, rej) => {
     fs.createReadStream(input)
@@ -84,7 +69,7 @@ function onAssetChange(input, output, wssPush, startup) {
   })
 }
 
-function runCmd(cmd, wssPush) {
+function runCmd(cmd) {
   if (!cmd) { return Promise.resolve() }
   console.log(`${cmd} ...`)
   return new Promise((res, rej) => {
@@ -94,7 +79,6 @@ function runCmd(cmd, wssPush) {
       } else {
         console.log(`${cmd} ... ok`)
       }
-      wssPush(true)
       res()
     })
   })
@@ -105,7 +89,6 @@ module.exports = async function server(argv) {
   const jsin = inputs[0]
   const jsout = argv.o
   const rel = argv.rel
-  const lessin = argv.less
   const cmd = argv.c
 
   let port = argv.p
@@ -159,26 +142,24 @@ module.exports = async function server(argv) {
 
   const onJsChangee = async () => {
     await onJsChange(bundle, jsout, wssPush)
-    return runCmd(cmd, wssPush)
+    return runCmd(cmd)
   }
 
   let startup = true
   setTimeout(() => startup = false, 5_000)
 
   const onAssetChangee = (path) => {
-    let todo = null
-    if (!startup && path.endsWith('.less')) {
-      todo = onLessCssChange(lessin, outdir, wssPush)
-    } else if (path.endsWith('.swp') || path.endsWith('.less')) {
+    let work = null
+    if (path.endsWith('.swp')) {
       // todo: use .gitignore
-      todo = null
+      work = null
     } else if (path.endsWith('index.html')) {
-      todo = onAssetChange(path, `${base}/${path}`, wssPush, startup)
+      work = onAssetChange(path, `${base}/${path}`, wssPush, startup)
     } else {
-      todo = onAssetChange(path, `${outdir}/${path}`, wssPush, startup)
+      work = onAssetChange(path, `${outdir}/${path}`, wssPush, startup)
     }
-    if (!todo || startup) { return }
-    return todo.then(() => runCmd(cmd, wssPush))
+    if (!work || startup) { return }
+    return work.then(() => runCmd(cmd))
   }
 
   const forceChange = async () => {
@@ -189,11 +170,8 @@ module.exports = async function server(argv) {
       const time = DateTime.now().toFormat('HH:mm:ss')
       console.log(`${time} wrote ${output}`)
     }
-    await deleteFileType(base, '.less')
     await onJsChangee()
-    if (!lessin) { return }
-    await onLessCssChange(lessin, outdir, wssPush)
-    await runCmd(cmd, wssPush)
+    await runCmd(cmd)
   }
 
   return new Promise((res, rej) => {

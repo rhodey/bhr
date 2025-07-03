@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const bhr = require('./')
+const bhr = require('./server.js')
 const minimist = require('minimist')
 const argv = minimist(process.argv.slice(2))
 
