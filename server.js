@@ -248,7 +248,7 @@ module.exports = async function server(argv) {
     }
 
     const httpServer = http.createServer((request, response) => {
-      const path = request.url
+      const path = request.url.split('?')[0]
       const fwd = fwdHost(path)
       if (fwd) { return fwdRequest(fwd, request, response) }
 
