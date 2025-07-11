@@ -1,6 +1,6 @@
 {
   "name": "browserify-hot-reload",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "browserify hot reload server",
   "license": "MIT",
   "main": "server.js",

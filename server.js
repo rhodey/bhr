@@ -16,7 +16,7 @@ const ws = require('ws')
 
 function setup(jsin, others) {
   const b = browserify({ entries: [jsin], cache: {}, packageCache: {} })
-  b.plugin(watchify, { poll: 250 })
+  b.plugin(watchify, { poll: 1000 })
   const fn = envify(process.env)
   b.transform(fn)
   const ch = chokidar.watch(others, {})
