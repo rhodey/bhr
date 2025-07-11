@@ -9,6 +9,7 @@ const watchify = require('watchify')
 const envify = require('@browserify/envify/custom')
 const chokidar = require('chokidar')
 const { DateTime } = require('luxon')
+const mime = require('mime')
 const http = require('http')
 const https = require('https')
 const ws = require('ws')
@@ -255,7 +256,9 @@ module.exports = async function server(argv) {
       // serve exact
       let file = `${base}${path}`
       if (!file.endsWith('/') && exists(file)) {
-        response.writeHead(200)
+        let head = mime.getType(file) ?? undefined
+        head = head ? { 'Content-Type': head } : undefined
+        response.writeHead(200, head)
         fs.createReadStream(file).pipe(response)
         return
       }

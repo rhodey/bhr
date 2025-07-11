@@ -1,6 +1,6 @@
 {
   "name": "browserify-hot-reload",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "browserify hot reload server",
   "license": "MIT",
   "main": "server.js",
@@ -20,6 +20,7 @@
     "chokidar": "^3.6.0",
     "mkdirp": "^3.0.1",
     "luxon": "^3.2.1",
+    "mime": "^3.0.0",
     "split": "^1.0.1",
     "ws": "^8.18.0"
   },
